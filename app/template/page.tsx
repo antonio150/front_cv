@@ -4,14 +4,15 @@ import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import Image from "next/image";
 import { useSearchParams } from "next/navigation";
-import { useEffect, useState } from "react";
+import { SetStateAction, useEffect, useState } from "react";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL;
 
 export default function TemplatePage() {
   const searchParams = useSearchParams();
   const [firstId, setFirstId] = useState(null);
-  const [loadingTemplate, setLoadingTemplate] = useState(null);
+  const [loadingTemplate, setLoadingTemplate] = useState<number | null>(null);
+  const [showCreateModal, setShowCreateModal] = useState(false);
 
   const templates = [
     {
@@ -46,7 +47,9 @@ export default function TemplatePage() {
       .then((data) => {
         // si la réponse est vide ou nulle, rediriger vers le formulaire immédiatement
         if (!data || (Array.isArray(data) && data.length === 0)) {
-          window.location.href = "/cv/form";
+          // window.location.href = "/cv/form";
+          setShowCreateModal(true);
+
           return;
         }
 
@@ -58,11 +61,13 @@ export default function TemplatePage() {
       });
   }, []);
 
-  const exportPdf = async (endpoint, templateId) => {
+  const exportPdf = async (endpoint: string, templateId: number ) => {
     if (!firstId) return;
 
     try {
+     
       setLoadingTemplate(templateId); // active le loading
+    
 
       const token = localStorage.getItem("token");
 
@@ -132,6 +137,32 @@ export default function TemplatePage() {
         ))}
       </div>
     </div>
+
+    {showCreateModal && (
+  <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+    <div className="bg-white rounded-xl shadow-xl p-8 w-96 text-center">
+      
+      <h2 className="text-xl font-bold mb-4">
+        Aucun CV trouvé
+      </h2>
+
+      <p className="text-gray-600 mb-6">
+        Vous devez créer votre CV avant de pouvoir choisir un template.
+      </p>
+
+      <div className="flex justify-center gap-4">
+       
+        <button
+          onClick={() => window.location.href = "/cv/form"}
+          className="px-4 py-2 bg-blue-600 text-white rounded-lg"
+        >
+          Créer mon CV
+        </button>
+      </div>
+    </div>
+  </div>
+)}
+
     <Footer />
     </div>
   );

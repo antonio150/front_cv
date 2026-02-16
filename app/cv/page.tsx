@@ -7,7 +7,70 @@ import Footer from "@/components/Footer";
 const API_URL = process.env.NEXT_PUBLIC_API_URL;
 
 export default function CvPage() {
-  const [cv, setCv] = useState(null);
+
+  // Ajoute ceci en haut du fichier (ou dans un fichier types/cv.ts)
+interface CvData {
+  id: number | string;
+  Photo?: {
+    pathRelative: string;
+    // autres champs si besoin
+  };
+  Biographie?: {
+    nom?: string;
+    prenom?: string;
+    email?: string;
+    phone?: string;
+    adresse?: string;
+    biographieSuites?: Array<{
+      titre: string;
+      contenue: string;
+    }>;
+  };
+  Apropos?: {
+    titre?: string;
+    description?: string;
+  };
+  Experience?: {
+    ExperienceContenu?: Array<{
+      titre?: string;
+      entreprise?: string;
+      anneeDebut?: string;
+      anneeFin?: string;
+      posteActuel?: boolean;
+      description?: string;
+    }>;
+  };
+  Formation?: {
+    FormationContenu?: Array<{
+      diplome?: string;
+      ecole?: string;
+      lieu?: string;
+      anneeDebut?: string;
+      anneeFin?: string;
+    }>;
+  };
+  Competence?: {
+    competenceContenus?: Array<{
+      champ: string;
+      contenue: string;
+    }>;
+  };
+  Langue?: {
+    LangueContenue?: Array<{
+      language: string;
+      niveau: string;
+    }>;
+  };
+  AutreActivite?: {
+    autreActiviteContenues?: Array<{
+      champ: string;
+      contenue: string;
+    }>;
+  };
+  // ajoute les autres sections manquantes si nécessaire
+}
+
+  const [cv, setCv] = useState<CvData | null>(null);
   const [hasValue, setHasValue] = useState(false);
   const API_URL = process.env.NEXT_PUBLIC_API_URL;
   const [firstId, setFirstId] = useState(null);
@@ -92,14 +155,14 @@ export default function CvPage() {
       <div className="py-5 flex gap-4 justify-center">
         <a
           href={hasValue ? `/cv/form/?id=${firstId}` : `/cv/form`}
-          className="inline-flex items-center gap-2 px-5 py-2.5 rounded-lg bg-blue-400 text-white font-medium shadow hover:bg-blue-700 hover:shadow-lg transition duration-200 focus:outline-none focus:ring-2 focus:ring-blue-400"
+          className="inline-flex items-center gap-2 px-5 py-2.5 rounded-lg bg-blue-600 text-white font-medium shadow hover:bg-blue-700 hover:shadow-lg transition duration-200 focus:outline-none focus:ring-2 focus:ring-blue-400"
         >
           {hasValue ? "✏️ Modifier" : "➕ Ajouter"}
         </a>
 
         <button
           type="button"
-          className="inline-flex items-center gap-2 px-5 py-2.5 rounded-lg bg-red-400 text-white font-medium shadow hover:bg-red-700 hover:shadow-lg transition duration-200 focus:outline-none focus:ring-2 focus:ring-red-400"
+          className="inline-flex items-center gap-2 px-5 py-2.5 rounded-lg bg-red-600 text-white font-medium shadow hover:bg-red-700 hover:shadow-lg transition duration-200 focus:outline-none focus:ring-2 focus:ring-red-400"
           onClick={deleteCv}
         >
           🗑️ Supprimer
@@ -249,7 +312,7 @@ export default function CvPage() {
   );
 }
 
-function Section({ title, children }) {
+function Section({ title, children }: { title: string; children: React.ReactNode }) {
   return (
     <div className="mb-6">
       <h2 className="text-xl font-semibold mb-2 border-b pb-1">{title}</h2>

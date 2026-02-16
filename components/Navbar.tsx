@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import AuthModal from "./AuthModal";
 
 
 
@@ -26,9 +27,7 @@ export default function Navbar() {
     const userId = userString ? JSON.parse(userString) : null;
     setToken(token);
     setUserToken(userId);
-    if(!token) {
-      router.push("/login");
-    }
+    
   }, [])
 
   const handleLogout = async () => {
@@ -43,7 +42,7 @@ export default function Navbar() {
         Authorization: `Bearer ${token}`,
       },
     });
-    router.push("/login");
+    // router.push("/login");
   } catch (error) {
     console.error("Erreur logout", error);
   } finally {
@@ -56,7 +55,23 @@ export default function Navbar() {
   }
 };
 
+// Chargement initial du token + user
+  useEffect(() => {
+    const token = localStorage.getItem("token");
+    const userString = localStorage.getItem("user");
 
+    if (token) {
+      setToken(token);
+    }
+
+   
+
+    // Si PAS de token → on montre la modal (et on peut commenter la redirection)
+    if (!token) {
+      setShowAuthModal(true);
+      // router.push("/login");   ← à décommenter UNIQUEMENT si tu veux vraiment forcer la page login
+    }
+  }, [router]);
   return (
     <header className="sticky top-0 z-50 w-full bg-blue-100 border-b">
       <nav className="max-w-7xl mx-auto px-6 py-4">
@@ -78,7 +93,7 @@ export default function Navbar() {
 
           {/* Desktop menu */}
           <ul className="hidden md:flex items-center gap-6 text-gray-600">
-            <li><Link href="/home">Accueil</Link></li>
+            <li><Link href="/">Accueil</Link></li>
             <li><Link href="/cv">Mon CV</Link></li>
             <li><Link href="/template">Template</Link></li>
            
@@ -115,7 +130,7 @@ export default function Navbar() {
         {/* Mobile menu */}
         {open && (
           <div className="md:hidden mt-4 space-y-4 border-t pt-4">
-            <Link onClick={() => setOpen(false)} href="/home" className="block">
+            <Link onClick={() => setOpen(false)} href="/" className="block">
               Accueil
             </Link>
             <Link onClick={() => setOpen(false)} href="/cv" className="block">
@@ -154,8 +169,22 @@ export default function Navbar() {
           </div>
         )}
       </nav>
-      
+      {showAuthModal && (
+      <AuthModal
+        isOpen={showAuthModal}
+        onClose={() => setShowAuthModal(false)}
+        onSuccess={() => {
+          const token = localStorage.getItem("token");
+          const userString = localStorage.getItem("user");
+          const user = userString ? JSON.parse(userString) : null;
 
+          setToken(token);
+          setUserToken(user);
+          setShowAuthModal(false);
+        }}
+      />
+      
+    )}
     </header>
   );
 }

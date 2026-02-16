@@ -6,18 +6,36 @@ import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 
 export default function ContenueCVForm() {
+  interface FormationItem {
+    ecole: string;
+    lieu: string;
+    diplome: string;
+    anneeDebut: string;
+    anneeFin: string;
+    // ajoute d'autres champs si ton API en renvoie (id, created_at, etc.)
+  }
+
+  interface ExperienceItem {
+    anneeDebut: string;
+    anneeFin: string;
+    entreprise: string;
+    titre: string;
+    posteActuel: boolean;
+    description: string;
+    typeTravail: string;
+  }
   const router = useRouter();
   const { id } = useParams();
   const API_URL = process.env.NEXT_PUBLIC_API_URL;
-  const [photo, setPhoto] = useState(null);
-  const [photoPreview, setPhotoPreview] = useState(null); // URL for selected file preview
+  const [photo, setPhoto] = useState<File | null>(null);
+  const [photoPreview, setPhotoPreview] = useState<string | null>(null); // URL for selected file preview
   const [existingPhotoUrl, setExistingPhotoUrl] = useState(null); // URL from API when editing
-  const [formationsErrors, setFormationsErrors] = useState([]);
-  const [experienceErrors, setExperienceErrors] = useState([]);
+  const [formationsErrors, setFormationsErrors] = useState<string[]>([]);
+  const [experienceErrors, setExperienceErrors] = useState<string[]>([]);
   const [loadingContent, setLoadingContent] = useState(false);
   const [showModal, setShowModal] = useState(false);
   const [modalTitle, setModalTitle] = useState("");
-  const [modalMessages, setModalMessages] = useState([]);
+  const [modalMessages, setModalMessages] = useState<string[]>([]);
 
   const [biographies, setBiographies] = useState({
     nom: "",
@@ -37,23 +55,38 @@ export default function ContenueCVForm() {
   ]);
   const [langues, setLangues] = useState([{ langue: "", niveau: "" }]);
   const [autres, setAutres] = useState([{ champ: "", contenue: "" }]);
-  const [experience, setExperience] = useState([
-    {
-      anneeDebut: "",
-      anneeFin: "",
-      entreprise: "",
-      titre: "",
-      posteActuel: false,
-      description: "",
-      typeTravail: ""
-    }
-  ]);
+  const [experience, setExperience] = useState<ExperienceItem[]>([]);
   const searchParams = useSearchParams();
   const cvId = searchParams.get("id");
-  const add = (set, obj) => set((v) => [...v, obj]);
-  const remove = (set, i) => set((v) => v.filter((_, index) => index !== i));
 
-  const formatDateForInput = (dateStr) => {
+
+  type Item = 
+  | { titre: string; contenue: string }           // biographiesSuite
+  | { ecole: string; lieu: string; diplome: string; anneeDebut: string; anneeFin: string } // formations
+  | { champ: string; contenue: string }           // competences, autres
+  | { langue: string; niveau: string }            // langues
+  | { 
+      anneeDebut: string; 
+      anneeFin: string; 
+      entreprise: string; 
+      titre: string; 
+      posteActuel: boolean; 
+      description: string; 
+      typeTravail: string 
+    }                                             // experience
+  // tu peux en ajouter d'autres si besoin
+;
+const add = <T extends Item>(
+  set: React.Dispatch<React.SetStateAction<T[]>>,
+  obj: Partial<T> | T   // ← accepte aussi Partial si besoin
+) => {
+  set((prev) => [...prev, { ...obj } as T]);   // ← le "as T" force le widening
+};
+
+const remove = <T extends Item>(set: React.Dispatch<React.SetStateAction<T[]>>, i: number) => {
+  set((v) => v.filter((_, index) => index !== i));
+};
+  const formatDateForInput = (dateStr: string | null | undefined) => {
     if (!dateStr) return "";
     return dateStr.split("T")[0]; // "2026-01-26"
   };
@@ -80,27 +113,23 @@ export default function ContenueCVForm() {
             setApropos(data.Apropos);
           }
 
-          if (data?.posteActuel) {
-            setPosteActuel(data.posteActuel);
-          }
-
           if (data?.Competence) {
             setCompetences(data.Competence.competenceContenus ?? []);
           }
 
           if (data?.Formation) {
-            const mapped = (data.Formation.FormationContenu ?? []).map((f) => ({
+            const mapped = (data.Formation.FormationContenu ?? []).map((f: { anneeDebut: string | null | undefined; anneeFin: string | null | undefined; }) => ({
               ...f,
               anneeDebut: formatDateForInput(f.anneeDebut),
               anneeFin: formatDateForInput(f.anneeFin)
             }));
             setFormations(mapped);
-            setFormationsErrors(Array(mapped.length).fill(""));
+            
           }
 
           if (data?.Langue) {
             setLangues(
-              data.Langue.LangueContenue.map((l) => ({
+              data.Langue.LangueContenue.map((l: { language: any; niveau: any; }) => ({
                 langue: l.language, // ⚠️ ton state attend "langue", pas "language"
                 niveau: l.niveau
               })) ?? []
@@ -113,18 +142,18 @@ export default function ContenueCVForm() {
 
           if (data?.Experience) {
             const mappedExp = (data.Experience.ExperienceContenu ?? []).map(
-              (e) => ({
+              (e: { anneeDebut: string | null | undefined; anneeFin: string | null | undefined; }) => ({
                 ...e,
                 anneeDebut: formatDateForInput(e.anneeDebut),
                 anneeFin: formatDateForInput(e.anneeFin)
               })
             );
             setExperience(mappedExp);
-            setExperienceErrors(Array(mappedExp.length).fill(""));
+            
           }
           // photo existante si fournie par l'API
           if (data?.Photo?.pathRelative) {
-            setExistingPhotoUrl(`${API_URL}${data.Photo.pathRelative}`);
+            setExistingPhotoUrl(`${API_URL}${data.Photo.pathRelative}` as any);
           }
           setLoadingContent(false);
         });
@@ -142,14 +171,14 @@ export default function ContenueCVForm() {
     };
   }, [photoPreview]);
 
-  const validateDateOrder = (start, end) => {
+  const validateDateOrder = (start: string | number, end: string | number) => {
     if (!start || !end) return "";
     return start > end
       ? "La date de début ne peut pas être postérieure à la date de fin"
       : "";
   };
 
-  const calculateDurationInMonths = (start, end) => {
+  const calculateDurationInMonths = (start: string | number | Date, end: string | number | Date) => {
     if (!start || !end) return "";
     // Dates sont au format YYYY-MM-DD
     const startDate = new Date(start);
@@ -161,7 +190,7 @@ export default function ContenueCVForm() {
     return Math.max(0, months).toString();
   };
 
-  const handleSubmit = async (e) => {
+  const handleSubmit = async (e: { preventDefault: () => void; }) => {
     e.preventDefault();
     // Re-validate dates before submit
     const newFormErrors = formations.map((f) =>
@@ -174,7 +203,7 @@ export default function ContenueCVForm() {
     setExperienceErrors(newExpErrors);
     if (newFormErrors.some(Boolean) || newExpErrors.some(Boolean)) {
       // build messages indicating which section and which items have errors
-      const details = [];
+      const details: string[] | ((prevState: never[]) => never[]) = [];
       if (newFormErrors.some(Boolean)) {
         newFormErrors.forEach((m, idx) => {
           if (m) details.push(`Formation ${idx + 1}: ${m}`);
@@ -194,7 +223,9 @@ export default function ContenueCVForm() {
     const formData = new FormData();
     const utilisateurId = localStorage.getItem("utilisateur_id") ?? null;
     const token = localStorage.getItem("token");
-    formData.append("utilisateur_id", utilisateurId);
+    if (utilisateurId !== null) {
+      formData.append("utilisateur_id", utilisateurId);
+    }
     /* =========================
    BIOGRAPHIE
 ========================= */
@@ -234,8 +265,17 @@ export default function ContenueCVForm() {
 ========================= */
     experience.forEach((exp, i) => {
       Object.entries(exp).forEach(([key, value]) => {
-        const stringValue =
-          value === null || value === undefined ? "" : String(value); // ← boolean devient "true" ou "false"
+        let stringValue;
+
+        if (key === "anneeFin" && exp.posteActuel) {
+          stringValue = ""; // ← on envoie vide / null quand c'est le poste actuel
+        } else if (value === null || value === undefined) {
+          stringValue = "";
+        } else if (typeof value === "boolean") {
+          stringValue = value ? "1" : "0"; // ou "true"/"false" selon ton backend
+        } else {
+          stringValue = String(value);
+        }
 
         formData.append(`Experience[contenus][${i}][${key}]`, stringValue);
       });
@@ -339,12 +379,13 @@ export default function ContenueCVForm() {
           <section className="bg-white p-6 rounded-xl shadow">
             <h2 className="text-xl font-semibold mb-4">📸 Photo</h2>
             <div className="flex flex-col">
-              <label className="text-sm font-medium text-gray-700 mb-1">
+              <label htmlFor="photo" className="text-sm font-medium text-gray-700 mb-1">
                 Photo de profil
               </label>
               <input
                 type="file"
                 accept="image/*"
+                id="photo"
                 required={!existingPhotoUrl} // obligatoire si pas d'image existante
                 onChange={(e) => {
                   const file = e.target.files?.[0] ?? null;
@@ -362,14 +403,14 @@ export default function ContenueCVForm() {
                     setPhotoPreview(null);
                   }
                 }}
-                className="text-sm text-gray-600"
+                className="w-full border border-gray-200 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-300"
               />
 
               {/* Preview: selected file takes precedence over existing image */}
               {(photoPreview || existingPhotoUrl) && (
                 <div className="mt-4 flex items-center gap-4">
                   <img
-                    src={photoPreview ?? existingPhotoUrl}
+                    src={photoPreview ?? existingPhotoUrl!}
                     alt="Aperçu photo"
                     className="w-28 h-28 object-cover rounded-full border"
                   />
@@ -820,18 +861,33 @@ export default function ContenueCVForm() {
                     <label className="text-sm font-medium text-gray-700 mb-1">
                       Date fin
                     </label>
-                    <input
-                      className="w-full border border-gray-200 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-300"
-                      type="date"
-                      placeholder="Date fin"
-                      required
-                      value={exp.anneeFin}
-                      onChange={(e) => {
-                        const copy = [...experience];
-                        copy[i].anneeFin = e.target.value;
-                        setExperience(copy);
-                      }}
-                    />
+                    {exp.posteActuel ? (
+                      <div className="w-full border border-gray-200 rounded-md px-3 py-2 bg-gray-100 text-gray-600 cursor-not-allowed">
+                        Aujourd'hui
+                      </div>
+                    ) : (
+                      <input
+                        className={`w-full rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-300 border ${
+                          experienceErrors[i] ? "border-red-500" : "border-gray-200"
+                        }`}
+                        type="date"
+                        required={!exp.posteActuel}           // ← required seulement si PAS poste actuel
+                        value={exp.anneeFin}
+                        onChange={(e) => {
+                          const copy = [...experience];
+                          copy[i].anneeFin = e.target.value;
+                          setExperience(copy);
+
+                          // recalcul erreur date
+                          const err = validateDateOrder(copy[i].anneeDebut, copy[i].anneeFin);
+                          setExperienceErrors((prev) => {
+                            const ne = [...prev];
+                            ne[i] = err;
+                            return ne;
+                          });
+                        }}
+                      />
+                    )}
                   </div>
                 </div>
 
@@ -927,8 +983,9 @@ export default function ContenueCVForm() {
                   entreprise: "",
                   titre: "",
                   description: "",
-                  typeTravail: ""
-                });
+                  typeTravail: "",
+                  posteActuel: false
+                }as ExperienceItem);
                 setExperienceErrors((prev) => [...prev, ""]);
               }}
               className="text-sm text-blue-600 hover:underline"
