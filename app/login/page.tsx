@@ -39,6 +39,7 @@ export default function LoginPage() {
       const { token, user } = res.data;
       localStorage.setItem("token", token);
       localStorage.setItem("utilisateur_id", user.id);
+      localStorage.setItem("user", JSON.stringify(user));
       console.log("User Google connecté:", user);
       router.push("/cv"); 
 

@@ -12,6 +12,22 @@ export default function CvPage() {
   const API_URL = process.env.NEXT_PUBLIC_API_URL;
   const [firstId, setFirstId] = useState(null);
 
+  const deleteCv = async () => {
+    const token = localStorage.getItem("token");
+    const res = await fetch(
+      `${API_URL}/api/contenue/delete_contenue/${firstId}`,
+      {
+        method: "DELETE",
+        headers: {
+          Authorization: `Bearer ${token}`
+        }
+      }
+    );
+    if (res.ok) {
+      window.location.href = "/cv/form";
+    }
+  };
+
   useEffect(() => {
     const token = localStorage.getItem("token");
     const utilisateurId = localStorage.getItem("utilisateur_id");
@@ -23,35 +39,73 @@ export default function CvPage() {
     })
       .then((res) => res.json())
       .then((data) => {
-        if (data.length > 0) {
-          setCv(data[0]); // tu prends le dernier CV
+        // si la réponse est vide ou nulle, rediriger vers le formulaire immédiatement
+        if (!data || (Array.isArray(data) && data.length === 0)) {
+          window.location.href = "/cv/form";
+          return;
         }
-        console.log(cv)
-        console.log(data[0].id)
-        setFirstId(data[0].id);
+
+        if (Array.isArray(data) && data.length > 0) {
+          setCv(data[0]); // tu prends le premier CV retourné
+          setFirstId(data[0].id);
+        } else if (data && !Array.isArray(data)) {
+          // si l'API retourne un objet unique
+          setCv(data);
+          if (data.id) setFirstId(data.id);
+        }
         setHasValue(true);
       });
   }, []);
 
-  if (!cv) return <p className="p-8">Chargement du CV...</p>;
+  
+  if (!cv)
+    return (
+  
+      <div className="min-h-screen flex items-center justify-center">
+        <svg
+          className="w-12 h-12 text-gray-600 animate-spin"
+          xmlns="http://www.w3.org/2000/svg"
+          fill="none"
+          viewBox="0 0 24 24"
+          aria-hidden="true"
+        >
+          <circle
+            className="opacity-25"
+            cx="12"
+            cy="12"
+            r="10"
+            stroke="currentColor"
+            strokeWidth="4"
+          ></circle>
+          <path
+            className="opacity-75"
+            fill="currentColor"
+            d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"
+          ></path>
+        </svg>
+      </div>
+    );
 
   return (
     <div>
       <Navbar />
-      <div className="pt-5 flex gap-4">
+      <div className="py-5 flex gap-4 justify-center">
         <a
           href={hasValue ? `/cv/form/?id=${firstId}` : `/cv/form`}
-          className="inline-flex items-center gap-2 px-5 py-2.5 rounded-lg bg-blue-600 text-white font-medium shadow hover:bg-blue-700 hover:shadow-lg transition duration-200 focus:outline-none focus:ring-2 focus:ring-blue-400"
+          className="inline-flex items-center gap-2 px-5 py-2.5 rounded-lg bg-blue-400 text-white font-medium shadow hover:bg-blue-700 hover:shadow-lg transition duration-200 focus:outline-none focus:ring-2 focus:ring-blue-400"
         >
           {hasValue ? "✏️ Modifier" : "➕ Ajouter"}
         </a>
 
         <button
           type="button"
-          className="inline-flex items-center gap-2 px-5 py-2.5 rounded-lg bg-red-600 text-white font-medium shadow hover:bg-red-700 hover:shadow-lg transition duration-200 focus:outline-none focus:ring-2 focus:ring-red-400"
+          className="inline-flex items-center gap-2 px-5 py-2.5 rounded-lg bg-red-400 text-white font-medium shadow hover:bg-red-700 hover:shadow-lg transition duration-200 focus:outline-none focus:ring-2 focus:ring-red-400"
+          onClick={deleteCv}
         >
           🗑️ Supprimer
         </button>
+
+        
       </div>
 
       <div className="min-h-screen bg-gray-100 p-8 flex justify-center">
@@ -95,18 +149,25 @@ export default function CvPage() {
             <div className="flex flex-col gap-4">
               {cv.Experience?.ExperienceContenu?.map((c, i) => {
                 const debut = c.anneeDebut
-                  ? new Date(c.anneeDebut).getFullYear()
-                  : "";
-                const fin = c.anneeFin
-                  ? new Date(c.anneeFin).getFullYear()
+                  ? new Date(c.anneeDebut).toLocaleDateString("fr-FR", {
+                      month: "short",
+                      year: "numeric"
+                    })
                   : "";
 
+                var fin = c.anneeFin
+                  ? new Date(c.anneeFin).toLocaleDateString("fr-FR", {
+                      month: "short",
+                      year: "numeric"
+                    })
+                  : "";
+                 fin = c.posteActuel ? "A présent" : fin
                 return (
                   <div key={i}>
                     <p className="font-semibold">{c?.titre}</p>
                     <p>{c?.entreprise}</p>
                     <p className="text-sm text-gray-500">
-                      {debut} → {fin}
+                      {debut} - {fin}
                     </p>
 
                     <p
@@ -138,7 +199,7 @@ export default function CvPage() {
                       {c.diplome || "Diplôme non précisé"}
                     </p>
                     <p>
-                      {c.ecole} – {c.lieu}
+                      {c.ecole} - {c.lieu}
                     </p>
                     <p className="text-sm text-gray-500">
                       {debut} → {fin}
@@ -153,11 +214,8 @@ export default function CvPage() {
           <Section title="💡 Compétences">
             <div className="flex flex-col gap-2">
               {cv.Competence?.competenceContenus?.map((c, i) => (
-                <span
-                  key={i}
-                  className="px-3 py-1 bg-gray-200 rounded-full text-sm"
-                >
-                  {c.champ} – {c.contenue}
+                <span key={i} className="px-3 py-1  text-sm">
+                  {c.champ} : {c.contenue}
                 </span>
               ))}
             </div>

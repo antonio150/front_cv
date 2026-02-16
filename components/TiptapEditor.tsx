@@ -1,39 +1,14 @@
 "use client";
 
 import { useEditor, EditorContent } from "@tiptap/react";
-import StarterKit from "@tiptap/starter-kit";
-// import CodeBlockLowlight from "@tiptap/extension-code-block-lowlight";
-
+import Document from "@tiptap/extension-document";
+import Paragraph from "@tiptap/extension-paragraph";
+import Text from "@tiptap/extension-text";
+import Bold from "@tiptap/extension-bold";
+import Italic from "@tiptap/extension-italic";
 import HardBreak from "@tiptap/extension-hard-break";
-import { Node } from "@tiptap/core";
 
-
-import { useEffect, useState } from "react";
-
-
-
-// Extension personnalisée pour le HTML brut
-const HtmlBlock = Node.create({
-  name: "htmlBlock",
-  group: "block",
-  code: true,
-  defining: true,
-  isolating: true,
-  content: "text*",
-
-  parseHTML() {
-    return [
-      {
-        tag: "div.html-block",
-        preserveWhitespace: "full",
-      },
-    ];
-  },
-
-  renderHTML() {
-    return ["div", { class: "html-block" }, 0];
-  },
-});
+import { useEffect } from "react";
 
 type Props = {
   content: string;
@@ -41,47 +16,54 @@ type Props = {
 };
 
 export default function TiptapEditor({ content, setContent }: Props) {
-    const [htmlInput, setHtmlInput] = useState("");
-    const [showHtmlModal, setShowHtmlModal] = useState(false);
+  const editor = useEditor({
+    extensions: [
+      Document,
+      Paragraph,
+      Text,
+      Bold,
+      Italic,
+      HardBreak,
+    ],
+    content,
+    immediatelyRender: false,
 
-    const editor = useEditor({
-        extensions: [
-        StarterKit,
-        
-        HtmlBlock,
-        HardBreak,
-        ],
-        content,
-        immediatelyRender: false,
-        onUpdate: ({ editor }) => {
-        setContent(editor.getHTML());
-        },
-    });
-    useEffect(() => {
-        if (editor && content !== editor.getHTML()) {
-            editor.commands.setContent(content);
+    editorProps: {
+      handlePaste(view, event) {
+        event.preventDefault();
+
+        const text = event.clipboardData?.getData("text/plain");
+
+        if (text) {
+          view.dispatch(
+            view.state.tr.insertText(text)
+          );
         }
-    }, [content, editor]);
+
+        return true;
+      },
+    },
+
+    onUpdate: ({ editor }) => {
+      setContent(editor.getHTML());
+    },
+  });
+
+  useEffect(() => {
+    if (editor && content !== editor.getHTML()) {
+      editor.commands.setContent(content);
+    }
+  }, [content, editor]);
 
   if (!editor) return null;
 
-  const insertHtml = () => {
-    if (htmlInput.trim()) {
-      // Insère directement le HTML dans l'éditeur
-      editor.chain().focus().insertContent(htmlInput).run();
-      setHtmlInput("");
-      setShowHtmlModal(false);
-    }
-  };
-
   return (
     <div className="border rounded bg-white">
-      {/* TOOLBAR */}
-      <div className="flex gap-2 border-b p-2 bg-gray-50 flex-wrap">
+      <div className="flex gap-2 border-b p-2 bg-gray-50">
         <button
           type="button"
           onClick={() => editor.chain().focus().toggleBold().run()}
-          className="px-2 py-1 border rounded hover:bg-gray-200"
+          className="px-2 py-1 border rounded"
         >
           B
         </button>
@@ -89,29 +71,16 @@ export default function TiptapEditor({ content, setContent }: Props) {
         <button
           type="button"
           onClick={() => editor.chain().focus().toggleItalic().run()}
-          className="px-2 py-1 border rounded hover:bg-gray-200"
+          className="px-2 py-1 border rounded"
         >
           I
         </button>
-
-        <button
-          type="button"
-          onClick={() => editor.chain().focus().toggleHeading({ level: 2 }).run()}
-          className="px-2 py-1 border rounded hover:bg-gray-200"
-        >
-          H2
-        </button>
-
-      
       </div>
 
-      {/* EDITOR */}
       <EditorContent
         editor={editor}
-        className="p-3 min-h-[200px] prose prose-sm max-w-none"
+        className="p-3 min-h-[200px]"
       />
-
-      
     </div>
   );
 }

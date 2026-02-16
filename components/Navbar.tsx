@@ -21,11 +21,14 @@ export default function Navbar() {
   const [userToken, setUserToken] = useState<User | null>(null);
 
   useEffect(() => {
-    const token = localStorage.getItem("tokenAuth");
+    const token = localStorage.getItem("token");
     const userString = localStorage.getItem("user");
     const userId = userString ? JSON.parse(userString) : null;
     setToken(token);
     setUserToken(userId);
+    if(!token) {
+      router.push("/login");
+    }
   }, [])
 
   const handleLogout = async () => {
@@ -40,6 +43,7 @@ export default function Navbar() {
         Authorization: `Bearer ${token}`,
       },
     });
+    router.push("/login");
   } catch (error) {
     console.error("Erreur logout", error);
   } finally {
@@ -54,13 +58,13 @@ export default function Navbar() {
 
 
   return (
-    <header className="sticky top-0 z-50 w-full border-b bg-white">
+    <header className="sticky top-0 z-50 w-full bg-blue-100 border-b">
       <nav className="max-w-7xl mx-auto px-6 py-4">
 
         <div className="flex items-center justify-between">
           {/* Logo */}
           <Link href="/" className="text-xl font-bold">
-            Code With Navira
+            Momba Ahy
           </Link>
 
           {/* Burger button (mobile) */}
@@ -75,10 +79,10 @@ export default function Navbar() {
           {/* Desktop menu */}
           <ul className="hidden md:flex items-center gap-6 text-gray-600">
             <li><Link href="/home">Accueil</Link></li>
-            <li><Link href="/home/realisation">Réalisations</Link></li>
-            <li><Link href="/home/formation">Formation</Link></li>
-            <li><Link href="https://www.youtube.com/@antoniorollandeyves6852">Youtube</Link></li>
-          </ul>
+            <li><Link href="/cv">Mon CV</Link></li>
+            <li><Link href="/template">Template</Link></li>
+           
+              </ul>
 
           {/* Desktop buttons */}
           <div className="hidden md:flex gap-1">
@@ -114,16 +118,13 @@ export default function Navbar() {
             <Link onClick={() => setOpen(false)} href="/home" className="block">
               Accueil
             </Link>
-            <Link onClick={() => setOpen(false)} href="/home/realisation" className="block">
-              Réalisations
+            <Link onClick={() => setOpen(false)} href="/cv" className="block">
+              Mon CV
             </Link>
-            <Link onClick={() => setOpen(false)} href="/home/formation" className="block">
-              Formation
+            <Link onClick={() => setOpen(false)} href="/template" className="block">
+              Template
             </Link>
-            <Link onClick={() => setOpen(false)} href="https://www.youtube.com/@antoniorollandeyves6852" className="block">
-              Youtube
-            </Link>
-           
+          
             <div className="flex flex-col gap-3 pt-4">
                 {(!token || !userToken) ? (
                   <>
